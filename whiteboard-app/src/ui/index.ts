@@ -1,2 +1,2 @@
-export { BoardStatus } from "./BoardStatus";
-export type { BoardStatusProps } from "./BoardStatus";
+export * from "./BoardStatus";
+export * from "./CommunicationStatus";

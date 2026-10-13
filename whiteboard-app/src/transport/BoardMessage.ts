@@ -1,6 +1,16 @@
-import type { BoardState } from "../board/BoardState";
-
-export type BoardMessage =
-  | { type: "ping" }
-  | { type: "pong" }
-  | { type: "replace-scene"; state: BoardState };
+export type {
+  BoardMessage,
+  ErrorMessage,
+  GetStateMessage,
+  HelloMessage,
+  SerializedBoardState,
+  StateAckMessage,
+  StateMessage,
+  WelcomeMessage,
+} from "../protocol";
+export {
+  BOARD_PROTOCOL_VERSION,
+  decodeMessage,
+  encodeMessage,
+  isBoardMessage,
+} from "../protocol";

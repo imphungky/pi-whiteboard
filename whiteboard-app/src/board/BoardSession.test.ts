@@ -49,16 +49,19 @@ describe("BoardSession", () => {
     expect(session.state).toEqual(savedState);
   });
 
-  it("saves a local scene change", async () => {
+  it("saves a local scene change and notifies state listeners", async () => {
     const persistence = new FakePersistence();
     const canvas = new FakeCanvas();
     const session = new BoardSession({ persistence, canvas });
     const changedState = { elements: [] };
+    const observed: BoardState[] = [];
+    session.subscribeState((state) => observed.push(state));
 
     await session.handleLocalSceneChange(changedState);
 
     expect(session.state).toEqual(changedState);
     expect(persistence.saved).toEqual([changedState]);
+    expect(observed).toEqual([changedState]);
   });
 
   it("displays and saves a remote scene change", async () => {

@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "outDir": "dist/extension",
+    "rootDir": ".",
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "types": ["node"]
+  },
+  "include": ["pi-extension/src/**/*.ts", "shared/board-protocol/src/**/*.ts"]
+}

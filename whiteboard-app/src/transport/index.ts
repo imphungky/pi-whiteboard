@@ -1,2 +1,4 @@
-export type { BoardMessage } from "./BoardMessage";
-export type { BoardTransport } from "./BoardTransport";
+export * from "./BoardCommunication";
+export * from "./BoardMessage";
+export * from "./BoardTransport";
+export * from "./WebSocketBoardConnection";

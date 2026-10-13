@@ -1,1 +1,8 @@
 docs/agents/
+node_modules/
+dist/
+.playwright-mcp/
+coverage/
+.vite/
+*.tsbuildinfo
+agents.md
