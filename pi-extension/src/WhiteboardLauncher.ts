@@ -26,6 +26,28 @@ export class WhiteboardLauncher {
 
   async launch(projectRoot: string): Promise<{ session: PiBoardSession; url: string }> {
     const session = await this.registry.getOrCreateDefault(projectRoot);
+    return this.openSession(session);
+  }
+
+  async launchSession(
+    projectRoot: string,
+    sessionId: string,
+  ): Promise<{ session: PiBoardSession; url: string }> {
+    const session = await this.registry.open(projectRoot, sessionId);
+    if (!session) {
+      throw new Error(`Unknown whiteboard session: ${sessionId}`);
+    }
+    return this.openSession(session);
+  }
+
+  async createSession(projectRoot: string): Promise<{ session: PiBoardSession; url: string }> {
+    const session = await this.registry.create(projectRoot);
+    return this.openSession(session);
+  }
+
+  private async openSession(
+    session: PiBoardSession,
+  ): Promise<{ session: PiBoardSession; url: string }> {
     await this.registry.updateLastOpened(session);
     const websocketUrl = await this.server.start();
     const url = this.buildLaunchUrl(websocketUrl, session.projectKey, session.sessionId);

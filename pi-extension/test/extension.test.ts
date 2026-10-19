@@ -6,6 +6,7 @@ import type {
   WhiteboardSessionMetadata,
 } from "../src/ProjectSessionStore.js";
 import { projectKey } from "../src/ProjectSessionStore.js";
+import { parseWhiteboardCommand } from "../src/index.js";
 
 class FakeProjectSessionStore implements ProjectSessionStore {
   private readonly sessions = new Map<string, WhiteboardSessionMetadata[]>();
@@ -27,8 +28,19 @@ class FakeProjectSessionStore implements ProjectSessionStore {
     return session;
   }
 
+  async list(projectRoot: string) {
+    return [...(this.sessions.get(projectRoot) ?? [])];
+  }
+
   async get(projectRoot: string, sessionId: string) {
     return (this.sessions.get(projectRoot) ?? []).find((session) => session.id === sessionId) ?? null;
+  }
+
+  async create(projectRoot: string, metadata: WhiteboardSessionMetadata) {
+    const sessions = this.sessions.get(projectRoot) ?? [];
+    sessions.push(metadata);
+    this.sessions.set(projectRoot, sessions);
+    return metadata;
   }
 
   async update(projectRoot: string, metadata: WhiteboardSessionMetadata) {
@@ -63,7 +75,45 @@ describe("BoardSessionRegistry", () => {
   });
 });
 
+describe("whiteboard command parsing", () => {
+  it("supports the default, list, new, and session commands", () => {
+    expect(parseWhiteboardCommand("")).toEqual({ type: "default" });
+    expect(parseWhiteboardCommand("list")).toEqual({ type: "list" });
+    expect(parseWhiteboardCommand("new")).toEqual({ type: "create" });
+    expect(parseWhiteboardCommand("architecture")).toEqual({
+      type: "open",
+      sessionId: "architecture",
+    });
+  });
+
+  it("rejects multiple command arguments", () => {
+    expect(() => parseWhiteboardCommand("new extra")).toThrow(
+      "Usage: whiteboard [list|new|session-id]",
+    );
+  });
+});
+
 describe("WhiteboardLauncher", () => {
+  it("opens an existing session and creates a new session", async () => {
+    const store = new FakeProjectSessionStore();
+    const registry = new BoardSessionRegistry({ sessionStore: store });
+    await registry.getOrCreateDefault("project-a");
+    const launcher = new WhiteboardLauncher(
+      registry,
+      { start: async () => "ws://127.0.0.1:4317" },
+      { whiteboardUrl: "http://localhost:5173/", openBrowser: () => undefined },
+    );
+
+    const opened = await launcher.launchSession("project-a", "default");
+    const created = await launcher.createSession("project-a");
+
+    expect(opened.session.sessionId).toBe("default");
+    expect(created.session.sessionId).not.toBe("default");
+    await expect(launcher.launchSession("project-a", "missing")).rejects.toThrow(
+      "Unknown whiteboard session: missing",
+    );
+  });
+
   it("launches the project default URL with server and session parameters", async () => {
     const registry = new BoardSessionRegistry({ sessionStore: new FakeProjectSessionStore() });
     const opened: string[] = [];

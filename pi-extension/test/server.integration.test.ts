@@ -24,8 +24,17 @@ class FakeProjectSessionStore {
     return session;
   }
 
+  async list(projectRoot: string) {
+    return [...(this.sessions.get(projectRoot) ?? [])];
+  }
+
   async get(_projectRoot: string, _sessionId: string) {
     return null;
+  }
+
+  async create(projectRoot: string, metadata: { id: string; title: string; createdAt: string; lastOpenedAt: string }) {
+    this.sessions.set(projectRoot, [...(this.sessions.get(projectRoot) ?? []), metadata]);
+    return metadata;
   }
 
   async update(projectRoot: string, metadata: { id: string; title: string; createdAt: string; lastOpenedAt: string }) {

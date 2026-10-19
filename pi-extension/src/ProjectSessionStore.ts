@@ -10,12 +10,19 @@ export type WhiteboardSessionMetadata = {
 };
 
 export interface ProjectSessionStore {
+  list(projectRoot: string): Promise<WhiteboardSessionMetadata[]>;
   getOrCreateDefault(projectRoot: string): Promise<WhiteboardSessionMetadata>;
   get(projectRoot: string, sessionId: string): Promise<WhiteboardSessionMetadata | null>;
+  create(projectRoot: string, metadata: WhiteboardSessionMetadata): Promise<WhiteboardSessionMetadata>;
   update(projectRoot: string, metadata: WhiteboardSessionMetadata): Promise<void>;
 }
 
 export class JsonProjectSessionStore implements ProjectSessionStore {
+  async list(projectRoot: string): Promise<WhiteboardSessionMetadata[]> {
+    const catalog = await this.load(projectRoot);
+    return [...catalog.sessions];
+  }
+
   async getOrCreateDefault(projectRoot: string): Promise<WhiteboardSessionMetadata> {
     const catalog = await this.load(projectRoot);
     const existing = catalog.sessions.find((session) => session.id === "default");
@@ -38,6 +45,16 @@ export class JsonProjectSessionStore implements ProjectSessionStore {
   async get(projectRoot: string, sessionId: string): Promise<WhiteboardSessionMetadata | null> {
     const catalog = await this.load(projectRoot);
     return catalog.sessions.find((session) => session.id === sessionId) ?? null;
+  }
+
+  async create(projectRoot: string, metadata: WhiteboardSessionMetadata): Promise<WhiteboardSessionMetadata> {
+    const catalog = await this.load(projectRoot);
+    if (catalog.sessions.some((session) => session.id === metadata.id)) {
+      throw new Error(`Whiteboard session already exists: ${metadata.id}`);
+    }
+    catalog.sessions.push(metadata);
+    await this.save(projectRoot, catalog);
+    return metadata;
   }
 
   async update(projectRoot: string, metadata: WhiteboardSessionMetadata): Promise<void> {

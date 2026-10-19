@@ -37,6 +37,24 @@ describe("JsonProjectSessionStore", () => {
     });
   });
 
+  it("lists and creates additional project sessions", async () => {
+    const projectRoot = await createProject();
+    const store = new JsonProjectSessionStore();
+    await store.getOrCreateDefault(projectRoot);
+
+    await store.create(projectRoot, {
+      id: "architecture",
+      title: "Architecture",
+      createdAt: "2025-01-01T00:00:00.000Z",
+      lastOpenedAt: "2025-01-01T00:00:00.000Z",
+    });
+
+    expect((await store.list(projectRoot)).map((session) => session.id)).toEqual([
+      "default",
+      "architecture",
+    ]);
+  });
+
   it("updates existing metadata without duplicating the session", async () => {
     const projectRoot = await createProject();
     const store = new JsonProjectSessionStore();

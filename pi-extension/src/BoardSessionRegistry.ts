@@ -69,6 +69,27 @@ export class BoardSessionRegistry {
     return session;
   }
 
+  async open(projectRoot: string, sessionId: string): Promise<PiBoardSession | null> {
+    const metadata = await this.sessionStore.get(projectRoot, sessionId);
+    if (!metadata) {
+      return null;
+    }
+
+    const key = this.sessionKey(projectRoot, sessionId);
+    const existing = this.sessions.get(key);
+    if (existing) {
+      return existing;
+    }
+
+    const session = new PiBoardSession(projectRoot, metadata);
+    this.sessions.set(key, session);
+    return session;
+  }
+
+  async list(projectRoot: string): Promise<WhiteboardSessionMetadata[]> {
+    return this.sessionStore.list(projectRoot);
+  }
+
   async updateLastOpened(session: PiBoardSession): Promise<void> {
     await this.sessionStore.update(session.projectRoot, {
       ...session.metadata,
@@ -77,8 +98,12 @@ export class BoardSessionRegistry {
   }
 
   async create(projectRoot: string, sessionId = this.createSessionId()): Promise<PiBoardSession> {
+    const existingMetadata = await this.sessionStore.list(projectRoot);
     let id = sessionId;
-    while (this.sessions.has(this.sessionKey(projectRoot, id))) {
+    while (
+      existingMetadata.some((session) => session.id === id) ||
+      this.sessions.has(this.sessionKey(projectRoot, id))
+    ) {
       id = this.createSessionId();
     }
 
@@ -89,7 +114,7 @@ export class BoardSessionRegistry {
       createdAt: now,
       lastOpenedAt: now,
     };
-    await this.sessionStore.update(projectRoot, metadata);
+    await this.sessionStore.create(projectRoot, metadata);
     const session = new PiBoardSession(projectRoot, metadata);
     this.sessions.set(this.sessionKey(projectRoot, id), session);
     return session;
