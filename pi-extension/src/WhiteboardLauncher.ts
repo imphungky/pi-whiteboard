@@ -24,21 +24,23 @@ export class WhiteboardLauncher {
     this.openBrowser = options.openBrowser ?? openBrowser;
   }
 
-  async launch(): Promise<{ session: PiBoardSession; url: string }> {
-    const session = this.registry.create();
+  async launch(projectRoot: string): Promise<{ session: PiBoardSession; url: string }> {
+    const session = await this.registry.getOrCreateDefault(projectRoot);
+    await this.registry.updateLastOpened(session);
     const websocketUrl = await this.server.start();
-    const url = this.buildLaunchUrl(websocketUrl, session.sessionId);
+    const url = this.buildLaunchUrl(websocketUrl, session.projectKey, session.sessionId);
     await this.openBrowser(url);
     return { session, url };
   }
 
-  buildLaunchUrl(websocketUrl: string, sessionId: string): string {
+  buildLaunchUrl(websocketUrl: string, projectId: string, sessionId: string): string {
     const whiteboardUrl = this.options.whiteboardUrl ?? this.server.httpUrl;
     if (!whiteboardUrl) {
       throw new Error("Whiteboard URL is not available");
     }
     const url = new URL(whiteboardUrl);
     url.searchParams.set("ws", websocketUrl);
+    url.searchParams.set("project", projectId);
     url.searchParams.set("session", sessionId);
     return url.toString();
   }

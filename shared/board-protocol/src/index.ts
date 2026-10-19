@@ -6,9 +6,12 @@ export type SerializedBoardState = {
   files?: unknown;
 };
 
+export type BoardAvailability = "available" | "missing" | "unavailable";
+
 export type BoardMessage =
   | HelloMessage
   | WelcomeMessage
+  | BoardStatusMessage
   | GetStateMessage
   | StateMessage
   | StateAckMessage
@@ -18,13 +21,21 @@ export type HelloMessage = {
   type: "hello";
   protocolVersion: typeof BOARD_PROTOCOL_VERSION;
   client: "whiteboard";
+  projectKey: string;
   sessionId: string;
 };
 
 export type WelcomeMessage = {
   type: "welcome";
   protocolVersion: typeof BOARD_PROTOCOL_VERSION;
+  projectKey: string;
   sessionId: string;
+};
+
+export type BoardStatusMessage = {
+  type: "board-status";
+  sessionId: string;
+  status: BoardAvailability;
 };
 
 export type GetStateMessage = {
@@ -73,12 +84,21 @@ export function isBoardMessage(value: unknown): value is BoardMessage {
       return (
         value.protocolVersion === BOARD_PROTOCOL_VERSION &&
         value.client === "whiteboard" &&
+        isNonEmptyString(value.projectKey) &&
         isNonEmptyString(value.sessionId)
       );
     case "welcome":
       return (
         value.protocolVersion === BOARD_PROTOCOL_VERSION &&
+        isNonEmptyString(value.projectKey) &&
         isNonEmptyString(value.sessionId)
+      );
+    case "board-status":
+      return (
+        isNonEmptyString(value.sessionId) &&
+        (value.status === "available" ||
+          value.status === "missing" ||
+          value.status === "unavailable")
       );
     case "get-state":
       return isNonEmptyString(value.requestId);

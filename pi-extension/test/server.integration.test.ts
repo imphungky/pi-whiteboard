@@ -7,13 +7,37 @@ import {
 } from "../../shared/board-protocol/src/index.js";
 import { BoardSessionRegistry } from "../src/BoardSessionRegistry.js";
 import { PiWebSocketServer } from "../src/PiWebSocketServer.js";
+import { projectKey } from "../src/ProjectSessionStore.js";
+
+class FakeProjectSessionStore {
+  private readonly sessions = new Map<string, { id: string; title: string; createdAt: string; lastOpenedAt: string }[]>();
+
+  async getOrCreateDefault(projectRoot: string) {
+    const sessions = this.sessions.get(projectRoot) ?? [];
+    let session = sessions[0];
+    if (!session) {
+      const now = new Date().toISOString();
+      session = { id: "default", title: "Project board", createdAt: now, lastOpenedAt: now };
+      sessions.push(session);
+      this.sessions.set(projectRoot, sessions);
+    }
+    return session;
+  }
+
+  async get(_projectRoot: string, _sessionId: string) {
+    return null;
+  }
+
+  async update(projectRoot: string, metadata: { id: string; title: string; createdAt: string; lastOpenedAt: string }) {
+    this.sessions.set(projectRoot, [metadata]);
+  }
+}
 
 describe("Pi WebSocket server", () => {
   it("handshakes and mirrors a whiteboard state", async () => {
-    const registry = new BoardSessionRegistry({
-      createSessionId: () => "session-1",
-    });
-    const session = registry.create();
+    const projectRoot = "project-a";
+    const registry = new BoardSessionRegistry({ sessionStore: new FakeProjectSessionStore() });
+    const session = await registry.getOrCreateDefault(projectRoot);
     const server = new PiWebSocketServer(registry);
     const websocketUrl = await server.start();
     const client = new WebSocket(websocketUrl);
@@ -28,6 +52,7 @@ describe("Pi WebSocket server", () => {
               type: "hello",
               protocolVersion: BOARD_PROTOCOL_VERSION,
               client: "whiteboard",
+              projectKey: projectKey(projectRoot),
               sessionId: session.sessionId,
             }),
           );
@@ -50,9 +75,20 @@ describe("Pi WebSocket server", () => {
           }
         });
         client.on("error", reject);
+
+        client.once("open", () => {
+          client.send(
+            encodeMessage({
+              type: "board-status",
+              sessionId: session.sessionId,
+              status: "available",
+            }),
+          );
+        });
       });
 
       expect(messages).toEqual(["welcome", "get-state", "state-ack"]);
+      expect(session.boardAvailability).toBe("available");
       expect(session.boardState).toEqual(state);
     } finally {
       client.close();

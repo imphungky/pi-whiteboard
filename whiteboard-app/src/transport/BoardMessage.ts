@@ -1,5 +1,7 @@
 export type {
+  BoardAvailability,
   BoardMessage,
+  BoardStatusMessage,
   ErrorMessage,
   GetStateMessage,
   HelloMessage,

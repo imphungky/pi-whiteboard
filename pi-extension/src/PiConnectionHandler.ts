@@ -3,6 +3,7 @@ import {
   decodeMessage,
   encodeMessage,
   type BoardMessage,
+  type BoardStatusMessage,
   type HelloMessage,
   type StateMessage,
 } from "../../shared/board-protocol/src/index.js";
@@ -38,6 +39,9 @@ export class PiConnectionHandler {
       case "hello":
         this.handleHello(message);
         return;
+      case "board-status":
+        this.handleBoardStatus(message);
+        return;
       case "state":
         this.handleState(message);
         return;
@@ -47,7 +51,7 @@ export class PiConnectionHandler {
   }
 
   private handleHello(message: HelloMessage): void {
-    const session = this.registry.get(message.sessionId);
+    const session = this.registry.getByProjectKey(message.projectKey, message.sessionId);
     if (!session) {
       this.sendError("unknown-session", "Unknown whiteboard session");
       this.connection.close(1008, "Unknown session");
@@ -63,8 +67,18 @@ export class PiConnectionHandler {
     this.send({
       type: "welcome",
       protocolVersion: BOARD_PROTOCOL_VERSION,
+      projectKey: session.projectKey,
       sessionId: session.sessionId,
     });
+  }
+
+  private handleBoardStatus(message: BoardStatusMessage): void {
+    if (!this.session || message.sessionId !== this.session.sessionId) {
+      this.sendError("handshake-required", "Complete the handshake first");
+      return;
+    }
+
+    this.session.boardAvailability = message.status;
     this.send({
       type: "get-state",
       requestId: randomUUID(),

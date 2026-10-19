@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 import { BoardSession, ExcalidrawBoard } from "./board";
-import { LocalStorageBoardPersistence } from "./persistence";
+import { boardStorageKey, LocalStorageBoardPersistence } from "./persistence";
 import {
   BoardCommunication,
+  readWebSocketConfig,
   WebSocketBoardConnection,
 } from "./transport";
 import { BoardStatus, CommunicationStatus } from "./ui";
@@ -14,11 +15,16 @@ export function App() {
   const [communication, setCommunication] =
     useState<BoardCommunication | null>(null);
   const sessionRef = useRef<BoardSession | null>(null);
+  const launchConfig = readWebSocketConfig(window.location.search);
 
   if (!sessionRef.current) {
-    sessionRef.current = new BoardSession({
-      persistence: new LocalStorageBoardPersistence(),
-    });
+    const persistence = launchConfig
+      ? new LocalStorageBoardPersistence(
+          window.localStorage,
+          boardStorageKey(launchConfig.projectKey, launchConfig.sessionId),
+        )
+      : new LocalStorageBoardPersistence();
+    sessionRef.current = new BoardSession({ persistence });
   }
 
   useEffect(() => {
@@ -41,6 +47,7 @@ export function App() {
         activeCommunication = new BoardCommunication({
           connection,
           boardSession: sessionRef.current!,
+          projectKey: connection.config.projectKey,
           sessionId: connection.config.sessionId,
         });
         setCommunication(activeCommunication);

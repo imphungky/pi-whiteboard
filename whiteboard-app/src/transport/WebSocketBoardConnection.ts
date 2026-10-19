@@ -13,6 +13,7 @@ import type { BoardTransport, TransportStatus } from "./BoardTransport";
 
 export type WebSocketConnectionConfig = {
   websocketUrl: string;
+  projectKey: string;
   sessionId: string;
 };
 
@@ -134,9 +135,10 @@ export function readWebSocketConfig(
 ): WebSocketConnectionConfig | null {
   const params = new URLSearchParams(search);
   const websocketUrl = params.get("ws");
+  const projectKey = params.get("project");
   const sessionId = params.get("session");
 
-  if (!websocketUrl || !sessionId) {
+  if (!websocketUrl || !projectKey || !sessionId) {
     return null;
   }
 
@@ -149,7 +151,7 @@ export function readWebSocketConfig(
     return null;
   }
 
-  return { websocketUrl, sessionId };
+  return { websocketUrl, projectKey, sessionId };
 }
 
 function createWebsocket(

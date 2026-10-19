@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { emptyBoardState } from "../board/BoardState";
 import {
   BOARD_STORAGE_KEY,
+  boardStorageKey,
   LocalStorageBoardPersistence,
 } from "./LocalStorageBoardPersistence";
 
@@ -20,6 +21,15 @@ function createStorage(): Storage {
 }
 
 describe("LocalStorageBoardPersistence", () => {
+  it("creates isolated keys for project sessions", () => {
+    expect(boardStorageKey("project-a", "default")).not.toBe(
+      boardStorageKey("project-b", "default"),
+    );
+    expect(boardStorageKey("project-a", "default")).not.toBe(
+      boardStorageKey("project-a", "other"),
+    );
+  });
+
   it("returns no board when nothing has been saved", async () => {
     const persistence = new LocalStorageBoardPersistence(createStorage());
 

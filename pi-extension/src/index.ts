@@ -7,7 +7,13 @@ export type PiExtensionApi = {
     name: string,
     options: {
       description: string;
-      handler: (args: string, context: { ui: { notify(message: string, level: "info" | "error"): void } }) => Promise<void>;
+      handler: (
+        args: string,
+        context: {
+          cwd: string;
+          ui: { notify(message: string, level: "info" | "error"): void };
+        },
+      ) => Promise<void>;
     },
   ): void;
   on(event: "session_shutdown", handler: () => Promise<void>): void;
@@ -24,7 +30,7 @@ export default function piWhiteboardExtension(pi: PiExtensionApi): void {
     description: "Launch a Pi-connected whiteboard",
     handler: async (_args, context) => {
       try {
-        const { session } = await launcher.launch();
+        const { session } = await launcher.launch(context.cwd);
         context.ui.notify(
           `Whiteboard session ${session.sessionId} launched`,
           "info",

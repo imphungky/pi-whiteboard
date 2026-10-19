@@ -11,6 +11,7 @@ export type BoardSessionDependencies = {
 };
 
 export type BoardSessionStatus = "idle" | "loading" | "saving" | "saved" | "error";
+export type BoardLoadStatus = "available" | "missing" | "unavailable";
 
 type Listener = () => void;
 type StateListener = (state: BoardState) => void;
@@ -18,6 +19,7 @@ type StateListener = (state: BoardState) => void;
 export class BoardSession {
   private currentState: BoardState | null = null;
   private currentStatus: BoardSessionStatus = "idle";
+  private currentLoadStatus: BoardLoadStatus = "missing";
   private readonly stateListeners = new Set<StateListener>();
   private readonly statusListeners = new Set<Listener>();
 
@@ -29,6 +31,10 @@ export class BoardSession {
 
   get status(): BoardSessionStatus {
     return this.currentStatus;
+  }
+
+  get loadStatus(): BoardLoadStatus {
+    return this.currentLoadStatus;
   }
 
   subscribe(listener: Listener): () => void {
@@ -45,12 +51,14 @@ export class BoardSession {
     this.setStatus("loading");
     try {
       const savedState = await this.dependencies.persistence.load();
+      this.currentLoadStatus = savedState ? "available" : "missing";
       this.currentState = savedState ?? { elements: [] };
       this.dependencies.canvas?.display(this.currentState);
       this.notifyStateListeners();
       this.setStatus("idle");
       return this.currentState;
     } catch (error) {
+      this.currentLoadStatus = "unavailable";
       this.setStatus("error");
       throw error;
     }

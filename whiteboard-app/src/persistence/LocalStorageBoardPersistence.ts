@@ -3,6 +3,10 @@ import type { BoardState } from "../board/BoardState";
 
 export const BOARD_STORAGE_KEY = "pi-whiteboard:board";
 
+export function boardStorageKey(projectKey: string, sessionId: string): string {
+  return `pi-whiteboard:${projectKey}:${sessionId}`;
+}
+
 export class LocalStorageBoardPersistence implements BoardPersistence {
   constructor(
     private readonly storage: Storage = window.localStorage,

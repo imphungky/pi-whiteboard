@@ -31,4 +31,21 @@ describe("board protocol", () => {
       }),
     ).toBe(true);
   });
+
+  it("recognizes board availability and rejects invalid availability", () => {
+    expect(
+      isBoardMessage({
+        type: "board-status",
+        sessionId: "session-1",
+        status: "missing",
+      }),
+    ).toBe(true);
+    expect(
+      isBoardMessage({
+        type: "board-status",
+        sessionId: "session-1",
+        status: "unknown",
+      }),
+    ).toBe(false);
+  });
 });

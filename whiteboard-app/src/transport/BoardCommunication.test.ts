@@ -56,39 +56,41 @@ class FakeTransport implements BoardTransport {
   }
 }
 
+async function createCommunication(initialState: BoardState | null) {
+  const session = new BoardSession({
+    persistence: new FakePersistence(initialState),
+  });
+  await session.start();
+  const transport = new FakeTransport();
+  const communication = new BoardCommunication({
+    connection: transport,
+    boardSession: session,
+    projectKey: "project-key",
+    sessionId: "session-1",
+  });
+  communication.start();
+  transport.emitMessage({
+    type: "welcome",
+    protocolVersion: 1,
+    projectKey: "project-key",
+    sessionId: "session-1",
+  });
+  return { communication, session, transport };
+}
+
 describe("BoardCommunication", () => {
-  it("handshakes and synchronizes the current board state", async () => {
+  it("reports restored state and synchronizes it", async () => {
     const state = { elements: [] } satisfies BoardState;
-    const session = new BoardSession({
-      persistence: new FakePersistence(state),
-    });
-    await session.start();
-    const transport = new FakeTransport();
-    const communication = new BoardCommunication({
-      connection: transport,
-      boardSession: session,
+    const { communication, transport } = await createCommunication(state);
+
+    expect(transport.sent[1]).toEqual({
+      type: "board-status",
       sessionId: "session-1",
+      status: "available",
     });
 
-    communication.start();
-
-    expect(transport.sent).toEqual([
-      {
-        type: "hello",
-        protocolVersion: 1,
-        client: "whiteboard",
-        sessionId: "session-1",
-      },
-    ]);
-
-    transport.emitMessage({
-      type: "welcome",
-      protocolVersion: 1,
-      sessionId: "session-1",
-    });
     transport.emitMessage({ type: "get-state", requestId: "request-1" });
-
-    const stateMessage = transport.sent[1];
+    const stateMessage = transport.sent[2];
     expect(stateMessage).toMatchObject({
       type: "state",
       requestId: "request-1",
@@ -108,26 +110,26 @@ describe("BoardCommunication", () => {
     expect(communication.status).toBe("ready");
   });
 
-  it("sends an accepted local state change after synchronization", async () => {
-    const session = new BoardSession({
-      persistence: new FakePersistence({ elements: [] }),
-    });
-    await session.start();
-    const transport = new FakeTransport();
-    const communication = new BoardCommunication({
-      connection: transport,
-      boardSession: session,
-      sessionId: "session-1",
+  it("reports missing state without crashing and sends an empty board when requested", async () => {
+    const { session, transport } = await createCommunication(null);
+
+    expect(session.loadStatus).toBe("missing");
+    expect(transport.sent[1]).toMatchObject({
+      type: "board-status",
+      status: "missing",
     });
 
-    communication.start();
-    transport.emitMessage({
-      type: "welcome",
-      protocolVersion: 1,
-      sessionId: "session-1",
-    });
     transport.emitMessage({ type: "get-state", requestId: "request-1" });
-    const initialState = transport.sent[1];
+    expect(transport.sent[2]).toMatchObject({
+      type: "state",
+      state: { elements: [] },
+    });
+  });
+
+  it("sends an accepted local state change after synchronization", async () => {
+    const { communication, session, transport } = await createCommunication({ elements: [] });
+    transport.emitMessage({ type: "get-state", requestId: "request-1" });
+    const initialState = transport.sent[2];
     if (initialState.type !== "state") {
       throw new Error("Expected an initial state message");
     }
@@ -144,22 +146,15 @@ describe("BoardCommunication", () => {
       type: "state",
       state: changedState,
     });
+    expect(communication.status).toBe("ready");
   });
 
-  it("does not become ready for a different session", async () => {
-    const session = new BoardSession({ persistence: new FakePersistence() });
-    await session.start();
-    const transport = new FakeTransport();
-    const communication = new BoardCommunication({
-      connection: transport,
-      boardSession: session,
-      sessionId: "session-1",
-    });
-
-    communication.start();
+  it("does not become ready for a different session or project", async () => {
+    const { communication, transport } = await createCommunication(null);
     transport.emitMessage({
       type: "welcome",
       protocolVersion: 1,
+      projectKey: "other-project",
       sessionId: "session-2",
     });
 

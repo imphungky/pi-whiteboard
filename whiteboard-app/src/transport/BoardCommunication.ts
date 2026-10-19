@@ -22,6 +22,7 @@ export type BoardCommunicationDependencies = {
   connection: BoardTransport;
   boardSession: BoardSession;
   sessionId: string;
+  projectKey: string;
 };
 
 type StatusListener = (status: CommunicationStatus) => void;
@@ -87,7 +88,7 @@ export class BoardCommunication {
   handleMessage(message: BoardMessage): void {
     switch (message.type) {
       case "welcome":
-        this.handleWelcome(message.sessionId);
+        this.handleWelcome(message.projectKey, message.sessionId);
         return;
       case "get-state":
         this.handleGetState(message);
@@ -99,6 +100,7 @@ export class BoardCommunication {
         this.setStatus("error");
         return;
       case "hello":
+      case "board-status":
       case "state":
         return;
     }
@@ -137,12 +139,15 @@ export class BoardCommunication {
     }
   }
 
-  private handleWelcome(sessionId: string): void {
-    const expectedSessionId = this.dependencies.sessionId;
-    if (expectedSessionId && sessionId !== expectedSessionId) {
+  private handleWelcome(projectKey: string, sessionId: string): void {
+    if (
+      projectKey !== this.dependencies.projectKey ||
+      sessionId !== this.dependencies.sessionId
+    ) {
       this.setStatus("error");
       return;
     }
+    this.sendBoardStatus();
     this.setStatus("connecting");
   }
 
@@ -164,7 +169,16 @@ export class BoardCommunication {
       type: "hello",
       protocolVersion: 1,
       client: "whiteboard",
+      projectKey: this.dependencies.projectKey,
       sessionId: this.dependencies.sessionId,
+    });
+  }
+
+  private sendBoardStatus(): void {
+    this.dependencies.connection.send({
+      type: "board-status",
+      sessionId: this.dependencies.sessionId,
+      status: this.dependencies.boardSession.loadStatus,
     });
   }
 
