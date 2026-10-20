@@ -6,7 +6,12 @@ import type {
   WhiteboardSessionMetadata,
 } from "../src/ProjectSessionStore.js";
 import { projectKey } from "../src/ProjectSessionStore.js";
-import { parseWhiteboardCommand } from "../src/index.js";
+import piWhiteboardExtension, {
+  parseWhiteboardCommand,
+  type PiExtensionApi,
+} from "../src/index.js";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 
 class FakeProjectSessionStore implements ProjectSessionStore {
   private readonly sessions = new Map<string, WhiteboardSessionMetadata[]>();
@@ -90,6 +95,47 @@ describe("whiteboard command parsing", () => {
     expect(() => parseWhiteboardCommand("new extra")).toThrow(
       "Usage: whiteboard [list|new|session-id]",
     );
+  });
+});
+
+describe("whiteboard command picker", () => {
+  it("shows the newly created default session before launching", async () => {
+    const cwd = await mkdtemp(`${tmpdir()}\\pi-whiteboard-picker-`);
+    let handler: Parameters<PiExtensionApi["registerCommand"]>[1]["handler"] | undefined;
+    let options: string[] | undefined;
+
+    const pi: PiExtensionApi = {
+      registerCommand(_name, command) {
+        handler = command.handler;
+      },
+      on() {
+        // The server is not started when the picker is cancelled.
+      },
+    };
+
+    try {
+      piWhiteboardExtension(pi);
+      if (!handler) throw new Error("whiteboard command was not registered");
+
+      await handler("", {
+        cwd,
+        hasUI: true,
+        ui: {
+          notify: () => undefined,
+          select: async (_title, pickerOptions) => {
+            options = pickerOptions;
+            return undefined;
+          },
+        },
+      });
+
+      expect(options).toEqual([
+        "Project board — default (default) [inactive]",
+        "New whiteboard",
+      ]);
+    } finally {
+      await rm(cwd, { recursive: true, force: true });
+    }
   });
 });
 

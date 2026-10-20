@@ -69,8 +69,10 @@ export class WhiteboardLauncher {
 }
 
 export function openBrowser(url: string): Promise<void> {
-  const command = process.platform === "win32" ? "cmd" : process.platform === "darwin" ? "open" : "xdg-open";
-  const args = process.platform === "win32" ? ["/c", "start", "", url] : [url];
+  // Use the Windows URL handler directly. Routing the URL through `cmd /c
+  // start` can interpret ampersands in query parameters as shell separators.
+  const command = process.platform === "win32" ? "rundll32.exe" : process.platform === "darwin" ? "open" : "xdg-open";
+  const args = process.platform === "win32" ? ["url.dll,FileProtocolHandler", url] : [url];
 
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, {
