@@ -4,7 +4,9 @@
   "description": "Pi extension with a bundled local whiteboard web app",
   "type": "module",
   "pi": {
-    "extensions": ["./pi-extension/index.ts"]
+    "extensions": [
+      "./pi-extension/index.ts"
+    ]
   },
   "piWhiteboard": {
     "webRoot": "dist/web"
@@ -14,6 +16,9 @@
     ".": "./dist/extension/pi-extension/src/index.js"
   },
   "files": [
+    "pi-extension/index.ts",
+    "pi-extension/src",
+    "shared/board-protocol/src",
     "dist/extension",
     "dist/web",
     "README.md"
@@ -24,7 +29,9 @@
     "build:extension": "tsc -p tsconfig.package.json",
     "build": "npm run build:web && npm run build:extension",
     "test": "vitest run --config vitest.config.ts whiteboard-app/src pi-extension/test",
-    "typecheck": "npm run build:extension && tsc -p whiteboard-app/tsconfig.app.json --noEmit"
+    "typecheck": "npm run build:extension && tsc -p whiteboard-app/tsconfig.app.json --noEmit",
+    "test:debug": "vitest run --config vitest.config.ts --no-file-parallelism --inspect-brk pi-extension/test",
+    "pi:debug": "node --inspect \"%APPDATA%/npm/node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js\" --extension ./pi-extension"
   },
   "dependencies": {
     "@excalidraw/excalidraw": "^0.18.0",

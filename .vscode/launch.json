@@ -1,0 +1,79 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug extension tests (vitest)",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "program": "${workspaceFolder}/node_modules/vitest/vitest.mjs",
+      "args": [
+        "run",
+        "--config",
+        "vitest.config.ts",
+        "--no-file-parallelism",
+        "pi-extension/test"
+      ],
+      "console": "integratedTerminal",
+      "smartStep": true,
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "name": "Debug current test file (vitest)",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "program": "${workspaceFolder}/node_modules/vitest/vitest.mjs",
+      "args": [
+        "run",
+        "--config",
+        "vitest.config.ts",
+        "--no-file-parallelism",
+        "${relativeFile}"
+      ],
+      "console": "integratedTerminal",
+      "smartStep": true,
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "name": "Launch pi with extension",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "runtimeExecutable": "node",
+      "program": "${env:APPDATA}/npm/node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js",
+      "args": ["--extension", "./pi-extension"],
+      "env": {
+        "JITI_SOURCE_MAPS": "1",
+        "JITI_FS_CACHE": "0",
+        "PI_WHITEBOARD_URL": "http://localhost:5173/"
+      },
+      "console": "integratedTerminal",
+      "smartStep": true,
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "name": "Attach to running pi",
+      "type": "node",
+      "request": "attach",
+      "port": 9229,
+      "restart": true,
+      "cwd": "${workspaceFolder}",
+      "smartStep": true,
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "name": "Debug whiteboard app (Chrome)",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:5173/",
+      "webRoot": "${workspaceFolder}/whiteboard-app"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Debug pi + whiteboard app",
+      "configurations": ["Launch pi with extension", "Debug whiteboard app (Chrome)"]
+    }
+  ]
+}

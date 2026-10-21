@@ -6,3 +6,4 @@ coverage/
 .vite/
 *.tsbuildinfo
 agents.md
+.pi
