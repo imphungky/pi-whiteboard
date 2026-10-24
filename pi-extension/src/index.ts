@@ -1,30 +1,12 @@
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { BoardSessionRegistry } from "./BoardSessionRegistry.js";
 import { PiWhiteboardServer } from "./PiWhiteboardServer.js";
 import { WhiteboardLauncher } from "./WhiteboardLauncher.js";
 import { pickWhiteboardAction } from "./WhiteboardSessionPicker.js";
+import { whiteboardInspectTool } from "./WhiteboardInspectTool.js";
 
-export type PiExtensionApi = {
-  registerCommand(
-    name: string,
-    options: {
-      description: string;
-      handler: (
-        args: string,
-        context: {
-          cwd: string;
-          hasUI: boolean;
-          ui: {
-            notify(message: string, level: "info" | "error"): void;
-            select(title: string, options: string[]): Promise<string | undefined>;
-          };
-        },
-      ) => Promise<void>;
-    },
-  ): void;
-  on(event: "session_shutdown", handler: () => Promise<void>): void;
-};
-
-export default function piWhiteboardExtension(pi: PiExtensionApi): void {
+export default function piWhiteboardExtension(pi: ExtensionAPI): void {
+  pi.registerTool(whiteboardInspectTool);
   const registry = new BoardSessionRegistry();
   const server = new PiWhiteboardServer(registry);
   const launcher = new WhiteboardLauncher(registry, server, {

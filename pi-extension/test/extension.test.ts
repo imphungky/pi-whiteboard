@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { BoardSessionRegistry } from "../src/BoardSessionRegistry.js";
 import { WhiteboardLauncher } from "../src/WhiteboardLauncher.js";
 import type {
@@ -8,7 +9,6 @@ import type {
 import { projectKey } from "../src/ProjectSessionStore.js";
 import piWhiteboardExtension, {
   parseWhiteboardCommand,
-  type PiExtensionApi,
 } from "../src/index.js";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -80,6 +80,52 @@ describe("BoardSessionRegistry", () => {
   });
 });
 
+describe("whiteboard_inspect tool", () => {
+  it("registers with Pi and returns a placeholder result when executed", async () => {
+    let registeredTool:
+      | {
+          name: string;
+          execute: (...args: any[]) => Promise<any>;
+        }
+      | undefined;
+    const pi = {
+      registerTool(tool: typeof registeredTool) {
+        registeredTool = tool ?? undefined;
+      },
+      registerCommand() {
+        // The command is not under test here.
+      },
+      on() {
+        return () => undefined;
+      },
+    } as unknown as ExtensionAPI;
+    const log = vi.spyOn(console, "info").mockImplementation(() => undefined);
+
+    try {
+      piWhiteboardExtension(pi);
+
+      expect(registeredTool?.name).toBe("whiteboard_inspect");
+      const result = await registeredTool?.execute("call-1", {});
+
+      expect(result).toEqual({
+        content: [
+          {
+            type: "text",
+            text: "Whiteboard inspection was called. Snapshot capture is not implemented yet.",
+          },
+        ],
+        details: { status: "not_implemented" },
+      });
+      expect(log).toHaveBeenCalledWith(
+        "[pi-whiteboard] whiteboard_inspect called",
+        { toolCallId: "call-1" },
+      );
+    } finally {
+      log.mockRestore();
+    }
+  });
+});
+
 describe("whiteboard command parsing", () => {
   it("supports the default, list, new, and session commands", () => {
     expect(parseWhiteboardCommand("")).toEqual({ type: "default" });
@@ -101,17 +147,21 @@ describe("whiteboard command parsing", () => {
 describe("whiteboard command picker", () => {
   it("shows the newly created default session before launching", async () => {
     const cwd = await mkdtemp(`${tmpdir()}\\pi-whiteboard-picker-`);
-    let handler: Parameters<PiExtensionApi["registerCommand"]>[1]["handler"] | undefined;
+    let handler: Parameters<ExtensionAPI["registerCommand"]>[1]["handler"] | undefined;
     let options: string[] | undefined;
 
-    const pi: PiExtensionApi = {
-      registerCommand(_name, command) {
+    const pi = {
+      registerTool() {
+        // The inspection tool is not under test here.
+      },
+      registerCommand(_name: string, command: { handler: typeof handler }) {
         handler = command.handler;
       },
       on() {
         // The server is not started when the picker is cancelled.
+        return () => undefined;
       },
-    };
+    } as unknown as ExtensionAPI;
 
     try {
       piWhiteboardExtension(pi);
